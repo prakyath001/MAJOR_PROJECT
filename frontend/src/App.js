@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import "./App.css"; // custom styling
+import "./App.css"; // your custom styling
 
 function App() {
+  // Input fields
   const fields = [
     "ER status measured by IHC",
     "3-Gene classifier subtype",
@@ -12,18 +13,18 @@ function App() {
     "HER2 Status",
   ];
 
-  const [form, setForm] = useState(
-    Object.fromEntries(fields.map((f) => [f, ""]))
-  );
-
+  // State
+  const [form, setForm] = useState(Object.fromEntries(fields.map(f => [f, ""])));
   const [prediction, setPrediction] = useState(null);
   const [explanation, setExplanation] = useState(null);
   const [suggestion, setSuggestion] = useState(null);
 
+  // Input change handler
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Predict API call
   const handlePredict = async () => {
     try {
       const res = await fetch("http://localhost:8000/predict", {
@@ -33,22 +34,25 @@ function App() {
       });
       const data = await res.json();
       setPrediction(data.prediction);
-      handleExplain(data.prediction);
+
+      // Clear previous explanation and suggestion
+      setExplanation(null);
+      setSuggestion(null);
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleExplain = async (predValue) => {
+  // Explain API call
+  const handleExplain = async () => {
+    if (!prediction) return; // prevent explain if no prediction
     try {
-      const reqBody = { ...form, prediction: predValue };
-
+      const reqBody = { ...form, prediction };
       const res = await fetch("http://localhost:8000/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(reqBody),
       });
-
       const data = await res.json();
       setExplanation(data.explanation);
       setSuggestion(data.suggestion);
@@ -60,9 +64,9 @@ function App() {
   return (
     <div className="page">
       <div className="card">
+        <h2 className="title">Breast Cancer Risk Prediction</h2>
 
-        <h2 className="title">Breast Cancer Prediction</h2>
-
+        {/* Input fields */}
         {fields.map((field) => (
           <div className="input-group" key={field}>
             <label>{field}</label>
@@ -76,18 +80,21 @@ function App() {
           </div>
         ))}
 
+        {/* Buttons */}
         <div className="btn-row">
           <button className="btn predict-btn" onClick={handlePredict}>
             Predict
           </button>
           <button
             className="btn explain-btn"
-            onClick={() => handleExplain(prediction)}
+            disabled={!prediction}
+            onClick={handleExplain}
           >
             Explain
           </button>
         </div>
 
+        {/* Prediction result */}
         {prediction !== null && (
           <div className="result-box">
             <h3>
@@ -99,6 +106,7 @@ function App() {
           </div>
         )}
 
+        {/* Explanation result */}
         {explanation && (
           <div className="explain-box">
             <h4>Feature Contributions (SHAP)</h4>
@@ -112,6 +120,7 @@ function App() {
           </div>
         )}
 
+        {/* AI Suggestion */}
         {suggestion && (
           <div className="suggest-box">
             <h4>AI Suggestion</h4>
