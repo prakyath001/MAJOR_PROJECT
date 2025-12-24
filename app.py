@@ -9,15 +9,11 @@ from sanic import Sanic
 from sanic.response import json as sjson
 from sanic_cors import CORS
 
-# ----------------------------
-# Config (optional for LLM)
-# ----------------------------
+
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 OLLAMA_CMD = os.getenv("OLLAMA_CMD_PATH", r"C:\Users\HP\AppData\Roaming\Microsoft\Windows\Start Menu\Programs")
 
-# ----------------------------
-# Top features
-# ----------------------------
+
 top_features = [
     "ER status measured by IHC",
     "3-Gene classifier subtype",
@@ -28,15 +24,11 @@ top_features = [
     "HER2 Status",
 ]
 
-# ----------------------------
-# Sanic app
-# ----------------------------
+
 app = Sanic("BreastCancerAPI")
 CORS(app)
 
-# ----------------------------
-# Load model & scaler
-# ----------------------------
+
 try:
     model = joblib.load("breast_cancer_model.pkl")
     scaler = joblib.load("scaler.pkl")
@@ -50,7 +42,7 @@ def call_ollama(prompt: str) -> str:
         resp = requests.post(
             "http://127.0.0.1:11434/api/generate",
             json={
-                "model": "tinyllama",
+                "model": "llama3.2:3b",
                 "prompt": prompt,
                 "stream": False
             },
@@ -88,9 +80,7 @@ def call_ollama(prompt: str) -> str:
         return ""
 
 
-# ----------------------------
-# Predict route
-# ----------------------------
+
 @app.post("/predict")
 async def predict(request):
     try:
@@ -123,9 +113,7 @@ async def predict(request):
     except Exception as e:
         return sjson({"error": str(e)}, status=500)
 
-# ----------------------------
-# Explain route
-# ----------------------------
+
 @app.post("/explain")
 async def explain(request):
     try:
@@ -174,13 +162,21 @@ async def explain(request):
         ])
 
         print("line num 135")
-        prompt = f"""
-                High breast cancer risk.
-                SHAP features: {current_exp}
-                Doctor and patient explanation.
-                JSON ONLY: {{"doctor":"","patient":""}}
-                """
+        prompt = f"""You are a medical AI assistant. Based on the breast cancer risk analysis below, provide explanations for both a doctor and a patient.
 
+                            High breast cancer risk detected.
+                            SHAP feature analysis: {current_exp}
+
+                            Please respond with ONLY valid JSON in this exact format:
+                            {{"doctor": "Professional medical explanation for healthcare providers", "patient": "Simple, reassuring explanation for the patient"}}
+
+                            Requirements:
+                            - Doctor explanation: Include medical terminology, SHAP interpretation, recommended actions
+                            - Patient explanation: Use simple language, be reassuring but honest, avoid technical jargon
+                            - Response must be valid JSON only, no other text
+
+                            Note: Negative SHAP values indicate protective factors, positive values indicate risk factors.
+                            Focus on the 3-Gene classifier subtype which shows the highest positive SHAP value (0.189) as the main risk contributor."""
 
 
         print("line num 146")
@@ -193,16 +189,21 @@ async def explain(request):
                 output=None
         if not output:
             doctor_text = (
-                    "The prediction indicates high breast cancer risk driven mainly by ER status, "
-                    "Nottingham prognostic index, and hormone receptor markers. Further diagnostic "
-                    "tests such as biopsy, imaging, and molecular profiling are recommended."
+                    """The model predicts low breast cancer risk, as no single feature shows a strong positive contribution toward malignancy.
+
+ER status and PR status have mild positive SHAP values, indicating limited influence on risk, while tumor size and molecular subtype contributions remain minimal. The absence of dominant high-risk features supports the low-risk classification.
+
+Clinically, this suggests no immediate concern, and the patient may continue with standard surveillance protocols and routine follow-up, without the need for aggressive diagnostic intervention at this stage."""
                 )
 
             patient_text = (
-                    "Your result shows a higher risk based on hormone and tumor-related factors. "
-                    "This does not confirm cancer, but it is important to consult a doctor, "
-                    "follow screening advice, and maintain a healthy lifestyle."
-                )
+                """Good news! Your test results indicate a low risk of breast cancer at this time.
+The contributing factors, such as hormone receptor status and tumor characteristics, suggest that there are no strong indicators of aggressive disease.
+
+However, maintaining regular health check-ups and routine screenings is still very important. A healthy lifestyle, balanced diet, physical activity, and awareness of any changes in your body will help ensure continued well-being."""
+
+            )
+                    
 
         else:
             doctor_text=output.get("doctor","")
@@ -222,9 +223,7 @@ async def explain(request):
     except Exception as e:
         return sjson({"error": str(e)}, status=500)
 
-# ----------------------------
-# Run server
-# ----------------------------
+
 if __name__ == "__main__":
     print("✅ BreastCancerAPI starting on http://localhost:8000")
     app.run(host="0.0.0.0", port=8000, debug=False)

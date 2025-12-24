@@ -65,10 +65,11 @@ function App() {
 
   // Explain API call
   const handleExplain = async () => {
-    if (!featureValues || !prediction) {
-      alert("Please run prediction first");
-      return;
-    }
+          if (!featureValues || prediction === null) {
+            alert("Please run prediction first");
+          return;
+        }
+
 
     setLoading(true);
     try {
@@ -131,12 +132,13 @@ function App() {
             {loading ? "Predicting..." : "Predict"}
           </button>
           <button
-            className="btn explain-btn"
-            disabled={!prediction || loading}
-            onClick={handleExplain}
-          >
-            {loading ? "Explaining..." : "Explain"}
+                className="btn explain-btn"
+                disabled={prediction === null || loading}
+                onClick={handleExplain}
+              >
+                {loading ? "Explaining..." : "Explain"}
           </button>
+
         </div>
 
         {/* Prediction result */}
@@ -148,7 +150,7 @@ function App() {
                 {prediction ? "High Risk" : "Low Risk"}
               </span>
             </h3>
-            {probability !== null && <p>Probability: {(probability * 100).toFixed(2)}%</p>}
+            {/* {probability !== null && <p>Probability: {(probability * 100).toFixed(2)}%</p>} */}
           </div>
         )}
 
